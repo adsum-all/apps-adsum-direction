@@ -69,6 +69,14 @@ export interface ParticipationGlobal {
   serie_evenements: { id: string; titre: string; debut: string | null; volet: string; presents: number; partiels: number; absents: number }[];
 }
 
-export function getParticipationGlobal(token: string): Promise<ParticipationGlobal> {
-  return authedGet<ParticipationGlobal>("/api/v1/admin/participation/global", token, "Participation indisponible");
+export async function getParticipationGlobal(token: string): Promise<ParticipationGlobal> {
+  const res = await fetch(`${BASE}/api/v1/admin/participation/global`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const message =
+      res.status === 401 ? "Session expirée" : res.status === 403 ? "Accès refusé" : "Participation indisponible";
+    throw new ApiError(message, res.status);
+  }
+  return (await res.json()) as ParticipationGlobal;
 }
