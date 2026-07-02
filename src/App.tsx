@@ -119,7 +119,7 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
 
 
           <section className="card">
-            <h2 className="card-title">Présence par activité</h2>
+            <h2 className="card-title">Présence par activité (récentes)</h2>
             <p className="muted" style={{ marginTop: 0 }}>Répartition présents / partiels / absents des dernières activités.</p>
             {participation.loading ? (
               <p className="muted">Chargement...</p>
@@ -127,7 +127,7 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
               <p className="muted">Aucune activité avec présence enregistrée pour le moment.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {(participation.data?.serie_evenements ?? []).slice(0, 8).map((ev) => (
+                {(participation.data?.serie_evenements ?? []).slice(0, 5).map((ev) => (
                   <div key={ev.id}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 4 }}>
                       <span style={{ fontSize: 13, fontWeight: 600 }}>{ev.titre}</span>
