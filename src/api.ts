@@ -53,7 +53,7 @@ export async function getStatistiques(token: string): Promise<Statistiques> {
   });
   if (!res.ok) {
     const message =
-      res.status === 401 ? "Session expiree" : res.status === 403 ? "Acces refuse" : "Statistiques indisponibles";
+      res.status === 401 ? "Session expirée" : res.status === 403 ? "Accès refusé" : "Statistiques indisponibles";
     throw new ApiError(message, res.status);
   }
   return (await res.json()) as Statistiques;

@@ -1,18 +1,52 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { type Session, getParticipationGlobal, getStatistiques } from "./api.js";
+import { ApiError, type Session, getParticipationGlobal, getStatistiques } from "./api.js";
 import { BarChart, DonutChart, LineChart, StackedBar, type ChartDatum } from "./components/Charts.js";
 import { Login } from "./components/Login.js";
 import { useResource } from "./useResource.js";
 
-const MONTHS_FR = ["janv.", "fevr.", "mars", "avr.", "mai", "juin", "juil.", "aout", "sept.", "oct.", "nov.", "dec."];
+// Persist the session across reloads so a refresh no longer logs the user out.
+// The token stays in localStorage only; every access is guarded for private mode.
+const SESSION_KEY = "adsum.dir.token";
+
+function loadSession(): Session | null {
+  try {
+    const raw = window.localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<Session>;
+    if (typeof parsed.token === "string" && parsed.token.length > 0) {
+      return { token: parsed.token, role: typeof parsed.role === "string" ? parsed.role : "" };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(session: Session): void {
+  try {
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {
+    // Storage unavailable (private mode): keep the in-memory session only.
+  }
+}
+
+function clearSession(): void {
+  try {
+    window.localStorage.removeItem(SESSION_KEY);
+  } catch {
+    // Storage unavailable (private mode): nothing to clear.
+  }
+}
+
+const MONTHS_FR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 
 const CHEMINEMENT_LABELS: Record<string, string> = {
   nouveau: "Nouveau",
   en_accompagnement: "En accompagnement",
   membre_actif: "Membre actif",
   responsable: "Responsable",
-  a_relancer: "A relancer",
+  a_relancer: "À relancer",
   en_pause: "En pause",
   ancien_membre: "Ancien membre",
 };
@@ -25,18 +59,39 @@ function toSeries(rows: { mois: string; total: number }[]): ChartDatum[] {
 }
 
 export function App(): JSX.Element {
-  const [session, setSession] = useState<Session | null>(null);
-  const onAuth = useCallback((s: Session) => setSession(s), []);
+  const [session, setSession] = useState<Session | null>(() => loadSession());
+  const onAuth = useCallback((s: Session) => {
+    saveSession(s);
+    setSession(s);
+  }, []);
+  const onLogout = useCallback(() => {
+    clearSession();
+    setSession(null);
+  }, []);
 
   if (!session) {
     return <Login onAuth={onAuth} />;
   }
-  return <DirectionDashboard session={session} onLogout={() => setSession(null)} />;
+  return <DirectionDashboard session={session} onLogout={onLogout} />;
 }
 
 function DirectionDashboard({ session, onLogout }: { session: Session; onLogout: () => void }): JSX.Element {
-  const { data, loading, error, reload } = useResource(() => getStatistiques(session.token), [session.token]);
-  const participation = useResource(() => getParticipationGlobal(session.token), [session.token]);
+  // A revoked or expired token surfaces as a 401: clear the session and return
+  // to the login screen cleanly, without a reload loop.
+  const onExpired = useCallback(
+    (err: unknown) => {
+      if (err instanceof ApiError && err.status === 401) {
+        onLogout();
+      }
+    },
+    [onLogout],
+  );
+  const { data, loading, error, reload } = useResource(
+    () => getStatistiques(session.token),
+    [session.token],
+    onExpired,
+  );
+  const participation = useResource(() => getParticipationGlobal(session.token), [session.token], onExpired);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   // Live view: consolidated figures refresh on their own every minute.

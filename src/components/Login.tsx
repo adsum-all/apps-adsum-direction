@@ -21,12 +21,12 @@ export function Login({ onAuth }: LoginProps): JSX.Element {
     try {
       const session = await login(email, password);
       if (!ALLOWED.has(session.role)) {
-        setError("Accès réservé a la direction.");
+        setError("Accès réservé à la direction.");
         return;
       }
       onAuth(session);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Erreur reseau");
+      setError(err instanceof ApiError ? err.message : "Erreur réseau");
     } finally {
       setBusy(false);
     }
