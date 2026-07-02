@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { type Session, getStatistiques } from "./api.js";
-import { BarChart, DonutChart, LineChart, type ChartDatum } from "./components/Charts.js";
+import { type Session, getParticipationGlobal, getStatistiques } from "./api.js";
+import { BarChart, DonutChart, LineChart, StackedBar, type ChartDatum } from "./components/Charts.js";
 import { Login } from "./components/Login.js";
 import { useResource } from "./useResource.js";
 
@@ -35,7 +35,20 @@ export function App(): JSX.Element {
 }
 
 function DirectionDashboard({ session, onLogout }: { session: Session; onLogout: () => void }): JSX.Element {
-  const { data, loading, error } = useResource(() => getStatistiques(session.token), [session.token]);
+  const { data, loading, error, reload } = useResource(() => getStatistiques(session.token), [session.token]);
+  const participation = useResource(() => getParticipationGlobal(session.token), [session.token]);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+  // Live view: consolidated figures refresh on their own every minute.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      reload();
+      participation.reload();
+      setLastUpdate(new Date());
+    }, 60000);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.token]);
 
   const entries = data ? toSeries(data.entrees_mensuelles) : [];
   const tauxVerif = data && data.membres_total > 0 ? Math.round((data.membres_verifies / data.membres_total) * 100) : 0;
@@ -68,6 +81,10 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
               <h1>Pilotage de la direction</h1>
               <p className="muted">Indicateurs consolidés, sur les données réelles du Sacerdoce Royal.</p>
             </div>
+            <span className="event-chip" title="Actualisation automatique toutes les 60 secondes">
+              <span className="event-dot" aria-hidden="true" />
+              En direct{lastUpdate ? ` · ${lastUpdate.toLocaleTimeString("fr-FR")}` : ""}
+            </span>
           </header>
 
           {error && <p className="banner banner-error">{error}</p>}
@@ -100,6 +117,30 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
             </section>
           </div>
 
+
+          <section className="card">
+            <h2 className="card-title">Présence par activité</h2>
+            <p className="muted" style={{ marginTop: 0 }}>Répartition présents / partiels / absents des dernières activités.</p>
+            {participation.loading ? (
+              <p className="muted">Chargement...</p>
+            ) : (participation.data?.serie_evenements ?? []).length === 0 ? (
+              <p className="muted">Aucune activité avec présence enregistrée pour le moment.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {(participation.data?.serie_evenements ?? []).slice(0, 8).map((ev) => (
+                  <div key={ev.id}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>{ev.titre}</span>
+                      <span className="muted" style={{ fontSize: 12 }}>
+                        {ev.presents} présents · {ev.partiels} partiels · {ev.absents} absents
+                      </span>
+                    </div>
+                    <StackedBar presents={ev.presents} partiels={ev.partiels} absents={ev.absents} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
           <div className="card-grid-2">
             <section className="card">
               <h2 className="card-title">Répartition par cheminement pastoral</h2>

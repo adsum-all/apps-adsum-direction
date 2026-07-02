@@ -62,3 +62,13 @@ export async function getStatistiques(token: string): Promise<Statistiques> {
 export function apiBaseUrl(): string {
   return BASE;
 }
+
+export interface ParticipationGlobal {
+  nb_evenements: number;
+  repartition_globale: { presents: number; partiels: number; absents: number; presentiel: number; en_ligne: number };
+  serie_evenements: { id: string; titre: string; debut: string | null; volet: string; presents: number; partiels: number; absents: number }[];
+}
+
+export function getParticipationGlobal(token: string): Promise<ParticipationGlobal> {
+  return authedGet<ParticipationGlobal>("/api/v1/admin/participation/global", token, "Participation indisponible");
+}
