@@ -54,10 +54,10 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
         </div>
         <span className="event-chip" title="Lecture seule">
           <span className="event-dot" aria-hidden="true" />
-          Vue consolidee, lecture seule
+          Vue consolidée, lecture seule
         </span>
         <button type="button" className="link" onClick={onLogout}>
-          Deconnexion
+          Déconnexion
         </button>
       </header>
 
@@ -66,7 +66,7 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
           <header className="page-head">
             <div>
               <h1>Pilotage de la direction</h1>
-              <p className="muted">Indicateurs consolides, sur les donnees reelles de la fraternite.</p>
+              <p className="muted">Indicateurs consolidés, sur les données réelles du Sacerdoce Royal.</p>
             </div>
           </header>
 
@@ -74,25 +74,25 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
 
           <div className="kpi-grid">
             <Kpi label="Membres" value={data?.membres_total} hint={`${data?.membres_actifs ?? 0} actifs`} loading={loading} accent />
-            <Kpi label="Taux de verification" value={tauxVerif} suffix="%" hint={`${data?.membres_en_attente ?? 0} en attente`} loading={loading} />
-            <Kpi label="Presences cumulees" value={data?.presences_total} hint={`${data?.evenements_total ?? 0} evenements`} loading={loading} />
+            <Kpi label="Taux de vérification" value={tauxVerif} suffix="%" hint={`${data?.membres_en_attente ?? 0} en attente`} loading={loading} />
+            <Kpi label="Présences cumulées" value={data?.presences_total} hint={`${data?.evenements_total ?? 0} événements`} loading={loading} />
             <Kpi label="Commissions" value={data?.commissions_total} hint={`${data?.intendances_total ?? 0} intendances`} loading={loading} />
           </div>
 
           <div className="card-grid-2">
             <section className="card">
-              <h2 className="card-title">Tendance des entrees, 12 derniers mois</h2>
+              <h2 className="card-title">Tendance des entrées, 12 derniers mois</h2>
               {loading ? <p className="muted">Chargement...</p> : <LineChart points={entries} />}
             </section>
             <section className="card">
-              <h2 className="card-title">Verification d'identite</h2>
+              <h2 className="card-title">Vérification d'identité</h2>
               {loading || !data ? (
                 <p className="muted">Chargement...</p>
               ) : (
                 <DonutChart
                   centerLabel="membres"
                   segments={[
-                    { label: "Verifies", value: data.membres_verifies },
+                    { label: "Vérifiés", value: data.membres_verifies },
                     { label: "En attente", value: data.membres_en_attente },
                   ]}
                 />
@@ -102,7 +102,7 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
 
           <div className="card-grid-2">
             <section className="card">
-              <h2 className="card-title">Repartition par cheminement pastoral</h2>
+              <h2 className="card-title">Répartition par cheminement pastoral</h2>
               {loading || !data ? (
                 <p className="muted">Chargement...</p>
               ) : (
