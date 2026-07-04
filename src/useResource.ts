@@ -11,7 +11,13 @@ export interface ResourceState<T> {
 
 // Load an async resource, exposing loading and error states plus a manual
 // reload so list views can refresh after a mutation. Keeps each screen small.
-export function useResource<T>(loader: () => Promise<T>, deps: unknown[]): ResourceState<T> {
+// An optional onError callback receives the raw failure, so callers can react
+// to specific statuses (e.g. a 401 that must clear the session).
+export function useResource<T>(
+  loader: () => Promise<T>,
+  deps: unknown[],
+  onError?: (err: unknown) => void,
+): ResourceState<T> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +38,10 @@ export function useResource<T>(loader: () => Promise<T>, deps: unknown[]): Resou
       })
       .catch((err: unknown) => {
         if (alive) {
-          setError(err instanceof ApiError ? err.message : "Erreur reseau");
+          setError(err instanceof ApiError ? err.message : "Erreur réseau");
           setLoading(false);
         }
+        onError?.(err);
       });
     return () => {
       alive = false;

@@ -21,12 +21,12 @@ export function Login({ onAuth }: LoginProps): JSX.Element {
     try {
       const session = await login(email, password);
       if (!ALLOWED.has(session.role)) {
-        setError("Acces reserve a la direction.");
+        setError("Accès réservé à la direction.");
         return;
       }
       onAuth(session);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Erreur reseau");
+      setError(err instanceof ApiError ? err.message : "Erreur réseau");
     } finally {
       setBusy(false);
     }
@@ -62,7 +62,7 @@ export function Login({ onAuth }: LoginProps): JSX.Element {
         <button type="submit" className="btn btn-primary" disabled={busy}>
           {busy ? "Connexion..." : "Se connecter"}
         </button>
-        <p className="muted small center">Vue consolidee, lecture seule.</p>
+        <p className="muted small center">Vue consolidée, lecture seule.</p>
       </form>
     </div>
   );

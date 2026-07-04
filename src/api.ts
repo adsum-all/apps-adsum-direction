@@ -18,6 +18,7 @@ export interface Statistiques {
   evenements_total: number;
   presences_total: number;
   commissions_total: number;
+  missions_total: number;
   intendances_total: number;
   par_commission: { commission: string; total: number }[];
   par_cheminement: { cheminement: string; total: number }[];
@@ -53,7 +54,7 @@ export async function getStatistiques(token: string): Promise<Statistiques> {
   });
   if (!res.ok) {
     const message =
-      res.status === 401 ? "Session expiree" : res.status === 403 ? "Acces refuse" : "Statistiques indisponibles";
+      res.status === 401 ? "Session expirée" : res.status === 403 ? "Accès refusé" : "Statistiques indisponibles";
     throw new ApiError(message, res.status);
   }
   return (await res.json()) as Statistiques;
@@ -61,4 +62,22 @@ export async function getStatistiques(token: string): Promise<Statistiques> {
 
 export function apiBaseUrl(): string {
   return BASE;
+}
+
+export interface ParticipationGlobal {
+  nb_evenements: number;
+  repartition_globale: { presents: number; partiels: number; absents: number; presentiel: number; en_ligne: number };
+  serie_evenements: { id: string; titre: string; debut: string | null; volet: string; presents: number; partiels: number; absents: number }[];
+}
+
+export async function getParticipationGlobal(token: string): Promise<ParticipationGlobal> {
+  const res = await fetch(`${BASE}/api/v1/admin/participation/global`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const message =
+      res.status === 401 ? "Session expirée" : res.status === 403 ? "Accès refusé" : "Participation indisponible";
+    throw new ApiError(message, res.status);
+  }
+  return (await res.json()) as ParticipationGlobal;
 }
