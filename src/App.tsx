@@ -212,7 +212,7 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
               )}
             </section>
             <section className="card">
-              <h2 className="card-title">Comparaison par commission</h2>
+              <h2 className="card-title">Comparaison par commission / mission</h2>
               {loading || !data ? (
                 <p className="muted">Chargement...</p>
               ) : (
