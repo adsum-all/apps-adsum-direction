@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { ApiError, type Session, getParticipationGlobal, getStatistiques } from "./api.js";
+import { ApiError, type Session, getParticipationGlobal, getPilotageMoi, getStatistiques } from "./api.js";
 import { BarChart, DonutChart, LineChart, StackedBar, type ChartDatum } from "./components/Charts.js";
 import { Login } from "./components/Login.js";
+import { Pilotage } from "./components/Pilotage.js";
 import { useResource } from "./useResource.js";
 
 // Persist the session across reloads so a refresh no longer logs the user out.
@@ -72,12 +73,13 @@ export function App(): JSX.Element {
   if (!session) {
     return <Login onAuth={onAuth} />;
   }
-  return <DirectionDashboard session={session} onLogout={onLogout} />;
+  return <Shell session={session} onLogout={onLogout} />;
 }
 
-function DirectionDashboard({ session, onLogout }: { session: Session; onLogout: () => void }): JSX.Element {
-  // A revoked or expired token surfaces as a 401: clear the session and return
-  // to the login screen cleanly, without a reload loop.
+// The unified Direction & Pilotage shell. Everyone with a non-empty scope enters:
+// a global role (direction/admin) sees the whole base and the detailed direction
+// view; a responsable de perimetre sees only their perimeter, in the same screens.
+function Shell({ session, onLogout }: { session: Session; onLogout: () => void }): JSX.Element {
   const onExpired = useCallback(
     (err: unknown) => {
       if (err instanceof ApiError && err.status === 401) {
@@ -86,6 +88,45 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
     },
     [onLogout],
   );
+  const moi = useResource(() => getPilotageMoi(session.token), [session.token], onExpired);
+  const [vue, setVue] = useState<"pilotage" | "direction">("pilotage");
+  const isGlobal = moi.data?.global ?? false;
+
+  return (
+    <div className="main">
+      <header className="topbar-app">
+        <div className="brand">
+          <span className="brand-logo" aria-hidden="true">A</span>
+          <span className="brand-text">
+            ADSUM<span className="brand-sub">Direction &amp; Pilotage</span>
+          </span>
+        </div>
+        {moi.data && (
+          <nav style={{ display: "flex", gap: 8 }}>
+            <button type="button" className="link" style={{ fontWeight: vue === "pilotage" ? 700 : 400 }} onClick={() => setVue("pilotage")}>Pilotage</button>
+            {isGlobal && (
+              <button type="button" className="link" style={{ fontWeight: vue === "direction" ? 700 : 400 }} onClick={() => setVue("direction")}>Direction</button>
+            )}
+          </nav>
+        )}
+        <button type="button" className="link" onClick={onLogout}>Déconnexion</button>
+      </header>
+      <div className="main-scroll">
+        {moi.error && !moi.data ? (
+          <div className="page"><p className="banner banner-error">{moi.error}</p></div>
+        ) : !moi.data ? (
+          <div className="page"><p className="muted">Chargement...</p></div>
+        ) : vue === "direction" && isGlobal ? (
+          <DirectionContent session={session} onExpired={onExpired} />
+        ) : (
+          <Pilotage token={session.token} moi={moi.data} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DirectionContent({ session, onExpired }: { session: Session; onExpired: (err: unknown) => void }): JSX.Element {
   const { data, loading, error, reload } = useResource(
     () => getStatistiques(session.token),
     [session.token],
@@ -109,31 +150,10 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
   const tauxVerif = data && data.membres_total > 0 ? Math.round((data.membres_verifies / data.membres_total) * 100) : 0;
 
   return (
-    <div className="main">
-      <header className="topbar-app">
-        <div className="brand">
-          <span className="brand-logo" aria-hidden="true">
-            A
-          </span>
-          <span className="brand-text">
-            ADSUM
-            <span className="brand-sub">Direction</span>
-          </span>
-        </div>
-        <span className="event-chip" title="Lecture seule">
-          <span className="event-dot" aria-hidden="true" />
-          Vue consolidée, lecture seule
-        </span>
-        <button type="button" className="link" onClick={onLogout}>
-          Déconnexion
-        </button>
-      </header>
-
-      <div className="main-scroll">
-        <div className="page">
+    <div className="page">
           <header className="page-head">
             <div>
-              <h1>Pilotage de la direction</h1>
+              <h1>Vue consolidée</h1>
               <p className="muted">Indicateurs consolidés, sur les données réelles du Sacerdoce Royal.</p>
             </div>
             <span className="event-chip" title="Actualisation automatique toutes les 60 secondes">
@@ -220,8 +240,6 @@ function DirectionDashboard({ session, onLogout }: { session: Session; onLogout:
               )}
             </section>
           </div>
-        </div>
-      </div>
     </div>
   );
 }
