@@ -159,6 +159,15 @@ export const getPerimetres = (t: string) => authGet<PerimetreUnite[]>("/api/v1/p
 export const getTableauDeBord = (t: string) => authGet<TableauDeBord>("/api/v1/pilotage/tableau-de-bord", t, "Tableau de bord");
 export const getPilotageAgenda = (t: string) => authGet<AgendaItem[]>("/api/v1/pilotage/agenda", t, "Agenda");
 export const getPilotageMembres = (t: string) => authGet<MembrePerimetre[]>("/api/v1/pilotage/membres", t, "Membres");
+
+export interface Assiduite {
+  fenetre_jours: number;
+  evenements: number;
+  a_relancer: number;
+  membres: { id: string; matricule: string | null; nom_affichage: string | null; presences: number }[];
+}
+
+export const getAssiduite = (t: string) => authGet<Assiduite>("/api/v1/pilotage/assiduite", t, "Assiduité");
 export const listConsultations = (t: string) => authGet<ConsultationItem[]>("/api/v1/pilotage/consultations", t, "Consultations");
 export const getConsultationResultats = (t: string, id: string) =>
   authGet<ConsultationResultats>(`/api/v1/pilotage/consultations/${id}/resultats`, t, "Résultats");

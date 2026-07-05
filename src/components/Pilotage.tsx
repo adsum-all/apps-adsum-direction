@@ -9,6 +9,7 @@ import {
   createActivite,
   createConsultation,
   exportMembresCsv,
+  getAssiduite,
   getConsultationResultats,
   getPerimetres,
   getPilotageAgenda,
@@ -72,14 +73,36 @@ export function Pilotage({ token, moi }: { token: string; moi: PilotageMoi }): J
 function TableauBord({ token }: { token: string }): JSX.Element {
   const kpi = useResource(() => getTableauDeBord(token), [token]);
   const agenda = useResource(() => getPilotageAgenda(token), [token]);
+  const assiduite = useResource(() => getAssiduite(token), [token]);
   const d = kpi.data;
+  const a = assiduite.data;
+  const aRelancer = (a?.membres ?? []).filter((m) => m.presences === 0);
   return (
     <>
       <div className="kpi-grid">
         <div className="kpi kpi-accent"><span className="kpi-label">Membres</span><span className="kpi-value">{d ? d.membres_total : "..."}</span><span className="kpi-hint">{d?.membres_actifs ?? 0} actifs</span></div>
         <div className="kpi"><span className="kpi-label">Vérifiés</span><span className="kpi-value">{d ? d.membres_verifies : "..."}</span><span className="kpi-hint">identité</span></div>
         <div className="kpi"><span className="kpi-label">Activités à venir</span><span className="kpi-value">{d ? d.activites_a_venir : "..."}</span><span className="kpi-hint">dans votre périmètre</span></div>
+        <div className="kpi"><span className="kpi-label">À relancer</span><span className="kpi-value">{a ? a.a_relancer : "..."}</span><span className="kpi-hint">0 présence sur {a?.fenetre_jours ?? 90} j</span></div>
       </div>
+      <section className="card">
+        <h2 className="card-title">Membres à relancer</h2>
+        <p className="muted" style={{ marginTop: 0 }}>Aucune présence enregistrée sur les {a?.fenetre_jours ?? 90} derniers jours ({a?.evenements ?? 0} activités).</p>
+        {assiduite.loading ? (
+          <p className="muted">Chargement...</p>
+        ) : aRelancer.length === 0 ? (
+          <p className="muted">Personne à relancer, bonne assiduité.</p>
+        ) : (
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+            {aRelancer.slice(0, 30).map((m) => (
+              <li key={m.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                <span>{m.nom_affichage ?? "-"}</span>
+                <span className="muted" style={{ fontSize: 12 }}>{m.matricule}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       <section className="card">
         <h2 className="card-title">Agenda du périmètre</h2>
         {agenda.loading ? (
