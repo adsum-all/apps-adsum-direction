@@ -171,6 +171,21 @@ export interface ConsultationCreate {
   questions: { libelle: string; type: string; options?: string[] }[];
 }
 
+export interface ActiviteCreate {
+  titre: string;
+  type?: string;
+  debut: string;
+  fin?: string;
+  lieu?: string;
+  mode?: string;
+  cible_type: string;
+  cible_id?: string;
+  visibilite: string;
+}
+
+export const createActivite = (t: string, body: ActiviteCreate) =>
+  authSend<{ id: string }>("/api/v1/pilotage/activites", t, "POST", body, "Création de l'activité");
+
 export const createConsultation = (t: string, body: ConsultationCreate) =>
   authSend<{ id: string }>("/api/v1/pilotage/consultations", t, "POST", body, "Création de la consultation");
 

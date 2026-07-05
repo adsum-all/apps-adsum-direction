@@ -1,10 +1,12 @@
 import { type CSSProperties, useCallback, useState } from "react";
 
 import {
+  type ActiviteCreate,
   ApiError,
   type ConsultationCreate,
   type PerimetreUnite,
   type PilotageMoi,
+  createActivite,
   createConsultation,
   exportMembresCsv,
   getConsultationResultats,
@@ -17,7 +19,7 @@ import {
 } from "../api.js";
 import { useResource } from "../useResource.js";
 
-type Onglet = "bord" | "consultations" | "membres";
+type Onglet = "bord" | "activites" | "consultations" | "membres";
 
 const tabStyle = (actif: boolean): CSSProperties => ({
   padding: "8px 16px",
@@ -55,10 +57,12 @@ export function Pilotage({ token, moi }: { token: string; moi: PilotageMoi }): J
       </header>
       <nav style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--adsum-border, #e5e5ec)", marginBottom: 16 }}>
         <button type="button" style={tabStyle(onglet === "bord")} onClick={() => setOnglet("bord")}>Tableau de bord</button>
+        <button type="button" style={tabStyle(onglet === "activites")} onClick={() => setOnglet("activites")}>Activités</button>
         <button type="button" style={tabStyle(onglet === "consultations")} onClick={() => setOnglet("consultations")}>Consultations</button>
         <button type="button" style={tabStyle(onglet === "membres")} onClick={() => setOnglet("membres")}>Membres</button>
       </nav>
       {onglet === "bord" && <TableauBord token={token} />}
+      {onglet === "activites" && <Activites token={token} moi={moi} />}
       {onglet === "consultations" && <Consultations token={token} moi={moi} />}
       {onglet === "membres" && <Membres token={token} />}
     </div>
@@ -99,25 +103,120 @@ function TableauBord({ token }: { token: string }): JSX.Element {
   );
 }
 
+function Activites({ token, moi }: { token: string; moi: PilotageMoi }): JSX.Element {
+  const agenda = useResource(() => getPilotageAgenda(token), [token]);
+  const perimetres = useResource(() => getPerimetres(token), [token]);
+  const [titre, setTitre] = useState("");
+  const [debut, setDebut] = useState("");
+  const [lieu, setLieu] = useState("");
+  const [cible, setCible] = useState("");
+  const [mode, setMode] = useState("presentiel");
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = useCallback(() => {
+    setErr(null);
+    if (!titre.trim() || !debut || !cible) {
+      setErr("Titre, date et cible requis.");
+      return;
+    }
+    let cible_type = "general";
+    let cible_id: string | undefined;
+    if (cible !== "general") {
+      const [dim, id] = cible.split(":");
+      cible_type = dim || "general";
+      cible_id = id || undefined;
+    }
+    const body: ActiviteCreate = {
+      titre: titre.trim(),
+      debut: new Date(debut).toISOString(),
+      lieu: lieu.trim() || undefined,
+      mode,
+      cible_type,
+      cible_id,
+      visibilite: "membres",
+    };
+    createActivite(token, body)
+      .then(() => {
+        setTitre("");
+        setDebut("");
+        setLieu("");
+        agenda.reload();
+      })
+      .catch((e: unknown) => setErr(e instanceof ApiError ? e.message : "Création impossible"));
+  }, [token, titre, debut, lieu, cible, mode, agenda]);
+
+  return (
+    <>
+      <section className="card">
+        <h2 className="card-title">Nouvelle activité</h2>
+        {err && <p className="banner banner-error">{err}</p>}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+          <input style={{ ...input, flex: 1 }} placeholder="Titre" value={titre} onChange={(e) => setTitre(e.target.value)} />
+          <input style={input} type="datetime-local" value={debut} onChange={(e) => setDebut(e.target.value)} />
+          <input style={input} placeholder="Lieu ou lien" value={lieu} onChange={(e) => setLieu(e.target.value)} />
+          <select style={input} value={mode} onChange={(e) => setMode(e.target.value)}>
+            <option value="presentiel">Présentiel</option>
+            <option value="en_ligne">En ligne</option>
+            <option value="hybride">Hybride</option>
+          </select>
+          <select style={input} value={cible} onChange={(e) => setCible(e.target.value)}>
+            <option value="">Cible...</option>
+            {moi.global && <option value="general">Général (tous)</option>}
+            {(perimetres.data ?? []).map((p: PerimetreUnite) => (
+              <option key={`${p.dimension}:${p.id}`} value={`${p.dimension}:${p.id}`}>
+                {p.dimension === "coordination" ? "Coordination" : p.dimension === "intendance" ? "Intendance" : "Tribu"} {p.nom}
+              </option>
+            ))}
+          </select>
+          <button type="button" style={{ ...btn, background: "var(--adsum-accent, #4f46e5)", color: "#fff", border: "none" }} onClick={submit}>Publier</button>
+        </div>
+      </section>
+      <section className="card">
+        <h2 className="card-title">Agenda du périmètre</h2>
+        {agenda.loading ? (
+          <p className="muted">Chargement...</p>
+        ) : (agenda.data ?? []).length === 0 ? (
+          <p className="muted">Aucune activité.</p>
+        ) : (
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+            {(agenda.data ?? []).map((a) => (
+              <li key={a.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                <span style={{ fontWeight: 600 }}>{a.titre}</span>
+                <span className="muted" style={{ fontSize: 12 }}>{a.debut ? new Date(a.debut).toLocaleString("fr-FR") : ""}{a.lieu ? ` · ${a.lieu}` : ""}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
+  );
+}
+
 function Membres({ token }: { token: string }): JSX.Element {
   const membres = useResource(() => getPilotageMembres(token), [token]);
   const [err, setErr] = useState<string | null>(null);
+  const [q, setQ] = useState("");
   const onExport = useCallback(() => {
     setErr(null);
     exportMembresCsv(token).catch((e: unknown) => setErr(e instanceof ApiError ? e.message : "Export impossible"));
   }, [token]);
+  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const visibles = (membres.data ?? []).filter((m) => !q.trim() || norm(m.nom_affichage ?? "").includes(norm(q)) || norm(m.matricule ?? "").includes(norm(q)));
   return (
     <section className="card">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 className="card-title" style={{ margin: 0 }}>Membres du périmètre</h2>
-        <button type="button" style={btn} onClick={onExport}>Exporter CSV</button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <h2 className="card-title" style={{ margin: 0 }}>Membres du périmètre ({visibles.length})</h2>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input style={input} placeholder="Rechercher" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button type="button" style={btn} onClick={onExport}>Exporter CSV</button>
+        </div>
       </div>
       {err && <p className="banner banner-error">{err}</p>}
       {membres.loading ? (
         <p className="muted">Chargement...</p>
       ) : (
         <ul style={{ listStyle: "none", margin: "12px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-          {(membres.data ?? []).map((m) => (
+          {visibles.map((m) => (
             <li key={m.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
               <span>{m.nom_affichage ?? "-"}</span>
               <span className="muted" style={{ fontSize: 12 }}>{m.matricule} · {m.statut}{m.verifie ? " · vérifié" : ""}</span>
