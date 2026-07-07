@@ -88,6 +88,38 @@ h3 {
   font-size: var(--adsum-text-sm);
   margin: 0;
 }
+.pw-field {
+  position: relative;
+  display: flex;
+}
+.pw-field input {
+  flex: 1;
+  width: 100%;
+  padding-right: 44px;
+}
+.pw-toggle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--adsum-mut);
+  cursor: pointer;
+  border-radius: var(--adsum-radius-sm);
+}
+.pw-toggle:hover {
+  color: var(--adsum-ink);
+}
+.pw-toggle:focus-visible {
+  outline: 2px solid var(--adsum-acc);
+  outline-offset: 1px;
+}
 
 /* Brand */
 .brand {
