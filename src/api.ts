@@ -88,7 +88,7 @@ export async function loginVerify(email: string, password: string, code: string,
 }
 
 export async function getMesPermissions(token: string): Promise<string[]> {
-  const res = await fetch(`${BASE}/api/v1/me/permissions`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`${BASE}/api/v1/membres/me/permissions`, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new ApiError("Impossible de vérifier vos accès", res.status);
   const data = (await res.json()) as { permissions?: string[] };
   return data.permissions ?? [];
